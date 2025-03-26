@@ -44,7 +44,6 @@ func main() {
 	// Запуск HTTP-сервера
 	r := api.SetupRouter(orderService)
 
-	log.Println("Server running on http://localhost:8084")
 	if err := r.Run(":8084"); err != nil {
 		log.Fatal("failed to start server:", err)
 	}

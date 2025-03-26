@@ -11,7 +11,7 @@ import (
 func main() {
 	basketDB, err := db.InitBasketDB()
 	if err != nil {
-		log.Fatal("failed to initialize database: ", err)
+		log.Fatal("failed to initialize basket database: ", err)
 	}
 
 	basketRepo := repository.NewPostgresBasketRepository(basketDB)
@@ -19,7 +19,6 @@ func main() {
 
 	r := api.SetupRouter(basketService)
 
-	log.Println("Server running on http://localhost:8083")
 	if err := r.Run(":8083"); err != nil {
 		log.Fatal("failed to start server:", err)
 	}

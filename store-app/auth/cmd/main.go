@@ -22,7 +22,6 @@ func main() {
 	r := api.SetupRouter(authService)
 
 	// Запуск сервера
-	log.Println("Server running on http://localhost:8085")
 	if err := r.Run(":8085"); err != nil {
 		log.Fatalf("Could not start server: %v", err)
 	}

@@ -41,10 +41,64 @@ services:
       - kafka-net
     restart: on-failure
 
+  db:
+    image: postgres:latest
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
+    volumes:
+      - pg-data:/var/lib/postgresql/data
+      - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
+  auth:
+    build: ./auth
+    ports:
+      - "8085:8085"
+    depends_on:
+      - db
+    environment:
+      - DATABASE_URL=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${DB_HOST}:${DB_PORT}/${AUTH_DB_NAME}
+    restart: unless-stopped
+
+  basket:
+    build: ./basket
+    ports:
+      - "8083:8083"
+    depends_on:
+      - db
+    environment:
+      - DATABASE_URL=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${DB_HOST}:${DB_PORT}/${BASKET_DB_NAME}
+    restart: unless-stopped
+
+  catalog:
+    build: ./catalog
+    ports:
+      - "8081:8081"
+    depends_on:
+      - db
+    environment:
+      - DATABASE_URL=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${DB_HOST}:${DB_PORT}/${CATALOG_DB_NAME}
+    restart: unless-stopped
+
+  orders:
+    build: ./orders
+    ports:
+      - "8084:8084"
+    depends_on:
+      - db
+    environment:
+      - DATABASE_URL=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${DB_HOST}:${DB_PORT}/${ORDERS_DB_NAME}
+    restart: unless-stopped
 volumes:
   kafka_data:
+    driver: local
+  pg-data:
     driver: local
 
 networks:
   kafka-net:
     driver: bridge
+
+

@@ -18,7 +18,6 @@ func main() {
 
 	r := api.SetupRouter(catalogService)
 
-	log.Println("Server running on http://localhost:8081")
 	if err := r.Run(":8081"); err != nil {
 		log.Fatal("failed to start server:", err)
 	}
