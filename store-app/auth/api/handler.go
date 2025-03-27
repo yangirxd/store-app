@@ -2,43 +2,11 @@ package api
 
 import (
 	"github.com/gin-gonic/gin"
-	swaggerFiles "github.com/swaggo/files"
-	ginSwagger "github.com/swaggo/gin-swagger"
+	"github.com/yangirxd/store-app/auth/api/dto"
 	_ "github.com/yangirxd/store-app/auth/docs"
 	"github.com/yangirxd/store-app/auth/service"
 	"net/http"
 )
-
-// @title Auth API
-// @version 1.0
-// @description This is an auth service using DDD and Gin
-// @host localhost:8085
-// @BasePath /
-func SetupRouter(authService *service.AuthService) *gin.Engine {
-	r := gin.Default()
-
-	// Swagger
-	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
-
-	// Группа API
-	api := r.Group("/user/v1")
-	{
-		api.POST("/register", registerHandler(authService))
-		api.POST("/login", loginHandler(authService))
-	}
-
-	return r
-}
-
-type RegisterRequest struct {
-	Email    string `json:"email" binding:"required,email"`
-	Password string `json:"password" binding:"required,min=6"`
-}
-
-type LoginRequest struct {
-	Email    string `json:"email" binding:"required,email"`
-	Password string `json:"password" binding:"required"`
-}
 
 // @Summary Register a new user
 // @Description Register a new user with email and password
@@ -52,7 +20,7 @@ type LoginRequest struct {
 // @Router /user/v1/register [post]
 func registerHandler(authService *service.AuthService) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		var req RegisterRequest
+		var req dto.RegisterRequest
 		if err := c.ShouldBindJSON(&req); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
@@ -80,7 +48,7 @@ func registerHandler(authService *service.AuthService) gin.HandlerFunc {
 // @Router /user/v1/login [post]
 func loginHandler(authService *service.AuthService) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		var req LoginRequest
+		var req dto.LoginRequest
 		if err := c.ShouldBindJSON(&req); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return

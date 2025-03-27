@@ -3,52 +3,11 @@ package api
 import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
-	swaggerFiles "github.com/swaggo/files"
-	ginSwagger "github.com/swaggo/gin-swagger"
+	"github.com/yangirxd/store-app/basket/api/dto"
 	_ "github.com/yangirxd/store-app/basket/docs"
-	"github.com/yangirxd/store-app/basket/middleware"
 	"github.com/yangirxd/store-app/basket/service"
 	"net/http"
 )
-
-// @title Basket API
-// @version 1.0
-// @description This is a basket service using DDD and Gin with JWT authentication
-// @host localhost:8083
-// @BasePath /
-func SetupRouter(basketService *service.BasketService) *gin.Engine {
-	r := gin.Default()
-
-	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
-
-	api := r.Group("/api/v1")
-	{
-		protected := api.Group("", middleware.BasketMiddleware())
-		{
-			protected.POST("/baskets", createBasketHandler(basketService))
-			protected.GET("/baskets", getBasketHandler(basketService))
-			protected.POST("/baskets/items", addItemHandler(basketService))
-			protected.DELETE("/baskets/items/:itemID", removeItemHandler(basketService))
-			protected.PUT("/baskets/items/:itemID", updateItemHandler(basketService))
-			protected.DELETE("/baskets", clearBasketHandler(basketService))
-		}
-	}
-
-	return r
-}
-
-type CreateBasketRequest struct {
-	UserEmail string `json:"userEmail" binding:"required,email"`
-}
-
-type AddItemRequest struct {
-	ProductID uuid.UUID `json:"productID" binding:"required"`
-	Quantity  int       `json:"quantity" binding:"required,gt=0"`
-}
-
-type UpdateItemRequest struct {
-	Quantity int `json:"quantity" binding:"required,gt=0"`
-}
 
 // @Summary Create a new basket
 // @Description Create a new basket for a user (requires authentication)
@@ -64,7 +23,7 @@ type UpdateItemRequest struct {
 // @Router /api/v1/baskets [post]
 func createBasketHandler(basketService *service.BasketService) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		var req CreateBasketRequest
+		var req dto.CreateBasketRequest
 		if err := c.ShouldBindJSON(&req); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
@@ -123,7 +82,7 @@ func addItemHandler(basketService *service.BasketService) gin.HandlerFunc {
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "user email not found in token"})
 			return
 		}
-		var req AddItemRequest
+		var req dto.AddItemRequest
 		if err := c.ShouldBindJSON(&req); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
@@ -193,7 +152,7 @@ func updateItemHandler(basketService *service.BasketService) gin.HandlerFunc {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid item ID"})
 			return
 		}
-		var req UpdateItemRequest
+		var req dto.UpdateItemRequest
 		if err := c.ShouldBindJSON(&req); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return

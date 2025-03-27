@@ -1,6 +1,20 @@
 version: "3.9"
 
 services:
+  traefik:
+    image: traefik:v3.3.3
+    command:
+      - "--api.insecure=true" # Включаем dashboard (только для разработки)
+      - "--providers.docker=true" # Используем Docker как источник конфигурации
+      - "--entrypoints.web.address=:80" # Точка входа на порту 80
+    ports:
+      - "80:80" # Прокидываем порт 80
+      - "8080:8080" # Порт для dashboard Traefik
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock" # Traefik читает Docker сокет
+    networks:
+      - web
+
   kafka:
     image: 'bitnami/kafka:latest'
     hostname: kafka
@@ -24,13 +38,13 @@ services:
     volumes:
       - kafka_data:/bitnami/kafka
     networks:
-      - kafka-net
+      - web
     restart: always
 
   kafka-ui:
     image: provectuslabs/kafka-ui:latest
     ports:
-      - "8080:8080"
+      - "8086:8086"
     environment:
       - KAFKA_CLUSTERS_0_NAME=local
       - KAFKA_CLUSTERS_0_BOOTSTRAP_SERVERS=kafka:9099
@@ -38,7 +52,7 @@ services:
     depends_on:
       - kafka
     networks:
-      - kafka-net
+      - web
     restart: on-failure
 
   db:
@@ -52,6 +66,9 @@ services:
     volumes:
       - pg-data:/var/lib/postgresql/data
       - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
+    restart: unless-stopped
+    networks:
+      - web
   auth:
     build: ./auth
     ports:
@@ -61,6 +78,15 @@ services:
     environment:
       - DATABASE_URL=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${DB_HOST}:${DB_PORT}/${AUTH_DB_NAME}
     restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.auth.rule=PathPrefix(`/auth`)" # Маршрутизация по пути /auth
+      - "traefik.http.routers.auth.entrypoints=web"
+      - "traefik.http.services.auth.loadbalancer.server.port=8085" # Порт сервиса
+      - "traefik.http.routers.auth.middlewares=auth-stripprefix"
+      - "traefik.http.middlewares.auth-stripprefix.stripprefix.prefixes=/auth" # Убираем префикс /auth
+    networks:
+      - web
 
   basket:
     build: ./basket
@@ -71,6 +97,15 @@ services:
     environment:
       - DATABASE_URL=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${DB_HOST}:${DB_PORT}/${BASKET_DB_NAME}
     restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.basket.rule=PathPrefix(`/basket`)" # Маршрутизация по пути /basket
+      - "traefik.http.routers.basket.entrypoints=web"
+      - "traefik.http.services.basket.loadbalancer.server.port=8083"
+      - "traefik.http.routers.basket.middlewares=basket-stripprefix"
+      - "traefik.http.middlewares.basket-stripprefix.stripprefix.prefixes=/basket"
+    networks:
+      - web
 
   catalog:
     build: ./catalog
@@ -81,6 +116,15 @@ services:
     environment:
       - DATABASE_URL=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${DB_HOST}:${DB_PORT}/${CATALOG_DB_NAME}
     restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.catalog.rule=PathPrefix(`/catalog`)" # Маршрутизация по пути /catalog
+      - "traefik.http.routers.catalog.entrypoints=web"
+      - "traefik.http.services.catalog.loadbalancer.server.port=8081"
+      - "traefik.http.routers.catalog.middlewares=catalog-stripprefix"
+      - "traefik.http.middlewares.catalog-stripprefix.stripprefix.prefixes=/catalog"
+    networks:
+      - web
 
   orders:
     build: ./orders
@@ -91,6 +135,16 @@ services:
     environment:
       - DATABASE_URL=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${DB_HOST}:${DB_PORT}/${ORDERS_DB_NAME}
     restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.orders.rule=PathPrefix(`/orders`)" # Маршрутизация по пути /orders
+      - "traefik.http.routers.orders.entrypoints=web"
+      - "traefik.http.services.orders.loadbalancer.server.port=8084"
+      - "traefik.http.routers.orders.middlewares=orders-stripprefix"
+      - "traefik.http.middlewares.orders-stripprefix.stripprefix.prefixes=/orders"
+    networks:
+      - web
+
 volumes:
   kafka_data:
     driver: local
@@ -98,7 +152,7 @@ volumes:
     driver: local
 
 networks:
-  kafka-net:
+  web:
     driver: bridge
 
 

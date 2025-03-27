@@ -2,57 +2,11 @@ package api
 
 import (
 	"github.com/gin-gonic/gin"
-	swaggerFiles "github.com/swaggo/files"
-	ginSwagger "github.com/swaggo/gin-swagger"
+	"github.com/yangirxd/store-app/catalog/api/dto"
 	_ "github.com/yangirxd/store-app/catalog/docs"
-	"github.com/yangirxd/store-app/catalog/middleware"
 	"github.com/yangirxd/store-app/catalog/service"
 	"net/http"
 )
-
-// @title Catalog API
-// @version 1.0
-// @description This is a catalog service using DDD and Gin with JWT authentication
-// @host localhost:8081
-// @BasePath /
-func SetupRouter(catalogService *service.CatalogService) *gin.Engine {
-	r := gin.Default()
-
-	// Swagger
-	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
-
-	// Группа API
-	api := r.Group("/api/v1")
-	{
-		// Открытый эндпоинт (без авторизации)
-		api.GET("/products", getAllProductsHandler(catalogService))
-		api.GET("/products/:id", getProductHandler(catalogService))
-
-		// Защищенные эндпоинты (требуют авторизации)
-		protected := api.Group("", middleware.CatalogMiddleware())
-		{
-			protected.POST("/products", createProductHandler(catalogService))
-			protected.PUT("/products/:id", updateProductHandler(catalogService))
-			protected.DELETE("/products/:id", deleteProductHandler(catalogService))
-		}
-	}
-
-	return r
-}
-
-type CreateProductRequest struct {
-	Name        string  `json:"name" binding:"required"`
-	Description string  `json:"description"`
-	Price       float64 `json:"price" binding:"required,gt=0"`
-	Stock       int     `json:"stock" binding:"required,gte=0"`
-}
-
-type UpdateProductRequest struct {
-	Name        string  `json:"name"`
-	Description string  `json:"description"`
-	Price       float64 `json:"price" binding:"gt=0"`
-	Stock       int     `json:"stock" binding:"gte=0"`
-}
 
 // @Summary Create a new product
 // @Description Create a new product in the catalog (requires authentication)
@@ -68,7 +22,7 @@ type UpdateProductRequest struct {
 // @Router /api/v1/products [post]
 func createProductHandler(catalogService *service.CatalogService) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		var req CreateProductRequest
+		var req dto.CreateProductRequest
 		if err := c.ShouldBindJSON(&req); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
@@ -140,7 +94,7 @@ func getAllProductsHandler(catalogService *service.CatalogService) gin.HandlerFu
 func updateProductHandler(catalogService *service.CatalogService) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		id := c.Param("id")
-		var req UpdateProductRequest
+		var req dto.UpdateProductRequest
 		if err := c.ShouldBindJSON(&req); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
