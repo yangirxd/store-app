@@ -1,0 +1,278 @@
+definitions:
+  domain.Basket:
+    properties:
+      createdAt:
+        type: string
+      id:
+        type: string
+      items:
+        items:
+          $ref: '#/definitions/domain.BasketItem'
+        type: array
+      userEmail:
+        description: Связь с пользователем через email
+        type: string
+    type: object
+  domain.BasketItem:
+    properties:
+      basketID:
+        type: string
+      createdAt:
+        type: string
+      id:
+        type: string
+      productID:
+        description: Ссылка на продукт из catalog
+        type: string
+      quantity:
+        type: integer
+    type: object
+  dto.AddItemRequest:
+    properties:
+      productID:
+        type: string
+      quantity:
+        type: integer
+    required:
+    - productID
+    - quantity
+    type: object
+  dto.CreateBasketRequest:
+    properties:
+      userEmail:
+        type: string
+    required:
+    - userEmail
+    type: object
+  dto.UpdateItemRequest:
+    properties:
+      quantity:
+        type: integer
+    required:
+    - quantity
+    type: object
+info:
+  contact: {}
+paths:
+  /api/v1/baskets:
+    delete:
+      description: Clear all items from the basket (requires authentication)
+      parameters:
+      - description: Bearer token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      responses:
+        "200":
+          description: Basket cleared
+          schema:
+            type: string
+        "401":
+          description: Unauthorized
+          schema:
+            type: string
+        "404":
+          description: Basket not found
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      summary: Clear basket
+      tags:
+      - baskets
+    get:
+      description: Get the basket for the authenticated user (requires authentication)
+      parameters:
+      - description: Bearer token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.Basket'
+        "401":
+          description: Unauthorized
+          schema:
+            type: string
+        "404":
+          description: Basket not found
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      summary: Get basket
+      tags:
+      - baskets
+    post:
+      consumes:
+      - application/json
+      description: Create a new basket for a user (requires authentication)
+      parameters:
+      - description: Bearer token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: Basket data
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/dto.CreateBasketRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/domain.Basket'
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+        "401":
+          description: Unauthorized
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      summary: Create a new basket
+      tags:
+      - baskets
+  /api/v1/baskets/items:
+    post:
+      consumes:
+      - application/json
+      description: Add an item to the basket (requires authentication)
+      parameters:
+      - description: Bearer token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: Item data
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/dto.AddItemRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Item added
+          schema:
+            type: string
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+        "401":
+          description: Unauthorized
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      summary: Add item to basket
+      tags:
+      - baskets
+  /api/v1/baskets/items/{itemID}:
+    delete:
+      description: Remove an item from the basket (requires authentication)
+      parameters:
+      - description: Bearer token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: Item ID
+        in: path
+        name: itemID
+        required: true
+        type: string
+      responses:
+        "200":
+          description: Item removed
+          schema:
+            type: string
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+        "401":
+          description: Unauthorized
+          schema:
+            type: string
+        "404":
+          description: Item not found
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      summary: Remove item from basket
+      tags:
+      - baskets
+    put:
+      consumes:
+      - application/json
+      description: Update the quantity of an item in the basket (requires authentication)
+      parameters:
+      - description: Bearer token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: Item ID
+        in: path
+        name: itemID
+        required: true
+        type: string
+      - description: Updated quantity
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/dto.UpdateItemRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Item updated
+          schema:
+            type: string
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+        "401":
+          description: Unauthorized
+          schema:
+            type: string
+        "404":
+          description: Item not found
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      summary: Update item quantity
+      tags:
+      - baskets
+swagger: "2.0"

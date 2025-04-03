@@ -1,0 +1,179 @@
+version: "3.9"
+
+services:
+  traefik:
+    image: traefik:v3.3.3
+    command:
+      - "--api.insecure=true"
+      - "--providers.docker=true"
+      - "--entrypoints.web.address=:80"
+    ports:
+      - "80:80"
+      - "8080:8080"
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock"
+    networks:
+      - web
+
+  kafka:
+    image: bitnami/kafka:3.9.0
+    hostname: kafka
+    container_name: kafka
+    ports:
+      - "9099:9099"
+      - "9093:9093"
+    environment:
+      - KAFKA_ENABLE_KRAFT=yes
+      - KAFKA_CFG_NODE_ID=1
+      - KAFKA_CFG_PROCESS_ROLES=broker,controller
+      - KAFKA_CFG_CONTROLLER_LISTENER_NAMES=CONTROLLER
+      - KAFKA_CFG_LISTENERS=PLAINTEXT://:9099,CONTROLLER://:9093
+      - KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+      - KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://kafka:9099,CONTROLLER://kafka:9093
+      - KAFKA_BROKER_ID=1
+      - KAFKA_CFG_CONTROLLER_QUORUM_VOTERS=1@kafka:9093
+      - ALLOW_PLAINTEXT_LISTENER=yes
+      - KAFKA_KRAFT_CLUSTER_ID=5b55b158-de1d-460b-a1e3-cc7e51544d37
+      - KAFKA_AUTO_CREATE_TOPICS_ENABLE=true
+    volumes:
+      - kafka_data:/bitnami/kafka
+    networks:
+      - kafka-net
+    restart: always
+    healthcheck:
+      test: [ "CMD", "kafka-topics.sh", "--list", "--bootstrap-server", "kafka:9099" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    labels:
+      - "traefik.enable=false"
+
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    ports:
+      - "8086:8086"
+    environment:
+      - KAFKA_CLUSTERS_0_NAME=local
+      - KAFKA_CLUSTERS_0_BOOTSTRAP_SERVERS=kafka:9099
+      - KAFKA_CLUSTERS_0_KRAFT_ENABLED=true
+      - SERVER_PORT=8086
+    depends_on:
+      kafka:
+        condition: service_healthy
+    networks:
+      - kafka-net
+    restart: on-failure
+    labels:
+      - "traefik.enable=false"
+
+  db:
+    image: postgres:latest
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
+    volumes:
+      - pg-data:/var/lib/postgresql/data
+      - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
+    restart: unless-stopped
+    networks:
+      - web
+  auth:
+    build: ./auth
+    ports:
+      - "8085:8085"
+    depends_on:
+      - db
+    environment:
+      - DATABASE_URL=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${DB_HOST}:${DB_PORT}/${AUTH_DB_NAME}
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY}
+    restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.auth.rule=PathPrefix(`/auth`)"
+      - "traefik.http.routers.auth.entrypoints=web"
+      - "traefik.http.services.auth.loadbalancer.server.port=8085"
+      - "traefik.http.routers.auth.middlewares=auth-stripprefix"
+      - "traefik.http.middlewares.auth-stripprefix.stripprefix.prefixes=/auth"
+    networks:
+      - web
+
+  basket:
+    build: ./basket
+    ports:
+      - "8083:8083"
+    depends_on:
+      - db
+    environment:
+      - DATABASE_URL=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${DB_HOST}:${DB_PORT}/${BASKET_DB_NAME}
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY}
+    restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.basket.rule=PathPrefix(`/basket`)"
+      - "traefik.http.routers.basket.entrypoints=web"
+      - "traefik.http.services.basket.loadbalancer.server.port=8083"
+      - "traefik.http.routers.basket.middlewares=basket-stripprefix"
+      - "traefik.http.middlewares.basket-stripprefix.stripprefix.prefixes=/basket"
+    networks:
+      - web
+
+  catalog:
+    build: ./catalog
+    ports:
+      - "8081:8081"
+    depends_on:
+      - db
+    environment:
+      - DATABASE_URL=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${DB_HOST}:${DB_PORT}/${CATALOG_DB_NAME}
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY}
+    restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.catalog.rule=PathPrefix(`/catalog`)"
+      - "traefik.http.routers.catalog.entrypoints=web"
+      - "traefik.http.services.catalog.loadbalancer.server.port=8081"
+      - "traefik.http.routers.catalog.middlewares=catalog-stripprefix"
+      - "traefik.http.middlewares.catalog-stripprefix.stripprefix.prefixes=/catalog"
+    networks:
+      - web
+
+  orders:
+    build: ./orders
+    ports:
+      - "8084:8084"
+    depends_on:
+      - db
+    environment:
+      - DATABASE_URL=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${DB_HOST}:${DB_PORT}/${ORDERS_DB_NAME}
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY}
+    restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.orders.rule=PathPrefix(`/orders`)"
+      - "traefik.http.routers.orders.entrypoints=web"
+      - "traefik.http.services.orders.loadbalancer.server.port=8084"
+      - "traefik.http.routers.orders.middlewares=orders-stripprefix"
+      - "traefik.http.middlewares.orders-stripprefix.stripprefix.prefixes=/orders"
+    networks:
+      - web
+      - kafka-net
+
+volumes:
+  kafka_data:
+    driver: local
+  pg-data:
+    driver: local
+
+networks:
+  web:
+    name: web
+    driver: bridge
+  kafka-net:
+    name: kafka-net
+    driver: bridge
+
+
