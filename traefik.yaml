@@ -31,4 +31,4 @@ http:
     swagger:
       loadBalancer:
         servers:
-          - url: "http://swagger-ui:8087"
+          - url: "http://swagger-ui:8080"

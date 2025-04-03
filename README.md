@@ -70,14 +70,17 @@ docker-compose up --build
 - **Orders Service**: `http://localhost:8084`
 - **Kafka UI**: `http://localhost:8086`
 - **Traefik Dashboard**: `http://localhost:8080`
+- **Единый Swagger UI**: `http://localhost/swagger/`
 
 ## 📚 Документация API
 
-Каждый сервис имеет свою Swagger документацию:
-- Auth: `http://localhost:8085/swagger/index.html`
-- Catalog: `http://localhost:8081/swagger/index.html`
-- Basket: `http://localhost:8083/swagger/index.html`
-- Orders: `http://localhost:8084/swagger/index.html`
+Swagger документация доступна в двух вариантах:
+1. Единый Swagger UI для всех сервисов: `http://localhost/swagger/`
+2. Отдельная документация для каждого сервиса:
+   - Auth: `http://localhost:8085/swagger/index.html`
+   - Catalog: `http://localhost:8081/swagger/index.html`
+   - Basket: `http://localhost:8083/swagger/index.html`
+   - Orders: `http://localhost:8084/swagger/index.html`
 
 ## 💾 Структура баз данных
 
