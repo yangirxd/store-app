@@ -12,6 +12,7 @@ services:
       - "8080:8080"
     volumes:
       - "/var/run/docker.sock:/var/run/docker.sock"
+      - ./traefik.yaml:/etc/traefik/traefik.yaml
     networks:
       - web
 
@@ -81,6 +82,7 @@ services:
     restart: unless-stopped
     networks:
       - web
+
   auth:
     build: ./auth
     ports:
@@ -161,6 +163,22 @@ services:
     networks:
       - web
       - kafka-net
+
+  swagger-ui:
+    image: swaggerapi/swagger-ui
+    container_name: swagger-ui
+    environment:
+      - SWAGGER_JSON=/openapi.yaml
+      - BASE_URL=/swagger
+    volumes:
+      - ./openapi.yaml:/openapi.yaml
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.swagger.rule=PathPrefix(`/swagger`)"
+      - "traefik.http.routers.swagger.entrypoints=web"
+      - "traefik.http.services.swagger.loadbalancer.server.port=8080"
+    networks:
+      - web
 
 volumes:
   kafka_data:

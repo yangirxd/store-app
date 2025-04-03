@@ -1,0 +1,34 @@
+api:
+  insecure: true
+  dashboard: true
+
+providers:
+  docker:
+    endpoint: "unix:///var/run/docker.sock"
+    exposedByDefault: false
+    network: web
+
+entryPoints:
+  web:
+    address: ":80"
+
+http:
+  middlewares:
+    swagger-redirect:
+      redirectRegex:
+        regex: "^(.*)/swagger$"
+        replacement: "${1}/swagger/"
+        permanent: true
+
+  routers:
+    swagger:
+      rule: "PathPrefix(`/swagger/`)"
+      service: swagger
+      entryPoints:
+        - web
+
+  services:
+    swagger:
+      loadBalancer:
+        servers:
+          - url: "http://swagger-ui:8087"
